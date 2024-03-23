@@ -3,7 +3,7 @@
  * @author Mauricio Dall Oglio Farina
  * @brief ESP MQTT Client Library
  */
-#ifdef USE_ESP_MQTT
+// #ifdef USE_ESP_MQTT
 #include "lib_esp_mqtt.h"
 
 #include "mqtt/lib_mqtt.h"
@@ -24,28 +24,34 @@ static mqtt_subscription_t mqtt_subscription[MQTT_MAX_SUBSCRIPTIONS] = {0}; /** 
  */
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data);
 
+/**
+ * @brief MQTT Data Event Handler
+ *
+ * @param event[in] MQTT event
+ */
+static void mqtt_data_event_handler(esp_mqtt_event_handle_t *event);
+
+static void mqtt_data_event_handler(esp_mqtt_event_handle_t *event) {
+
+    for (uint32_t i = 0; i < MQTT_MAX_SUBSCRIPTIONS; ++i) {
+        if (strlen(mqtt_subscription[i].topic) == event->topic_len) {
+            if (0 == memcmp(event->topic, mqtt_subscription[i].topic, event->topic_len)) {
+                mqtt_subscription[i].callback(event->topic, (uint8_t *)event->data, (uint32_t)event->data_len);
+                break;
+            }
+        }
+    }
+}
+
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data) {
 
     esp_mqtt_event_handle_t event = event_data;
 
     switch ((esp_mqtt_event_id_t)event_id) {
-        case MQTT_EVENT_CONNECTED:
-            ESP_LOGI("MQTT_CLIENT", "MQTT_EVENT_CONNECTED");
-            break;
-        case MQTT_EVENT_DISCONNECTED:
-            ESP_LOGI("MQTT_CLIENT", "MQTT_EVENT_DISCONNECTED");
-            break;
         case MQTT_EVENT_DATA:
             ESP_LOGI("MQTT_CLIENT", "GOT DATA %s %d", event->topic, event->topic_len);
-            for (uint32_t i = 0; i < MQTT_MAX_SUBSCRIPTIONS; ++i) {
-                if (strlen(mqtt_subscription[i].topic) == event->topic_len) {
-                    if (0 == memcmp(event->topic, mqtt_subscription[i].topic, event->topic_len)) {
-                        mqtt_subscription[i].callback(event->topic, (uint8_t *)event->data, (uint32_t)event->data_len);
-                    }
-                }
-            }
+            mqtt_data_event_handler(&event);
             break;
-
         case MQTT_EVENT_ERROR:
             ESP_LOGE("MQTT_CLIENT", "MQTT_EVENT_ERROR");
             esp_restart();
