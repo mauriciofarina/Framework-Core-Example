@@ -3,7 +3,7 @@
  * @author Mauricio Dall Oglio Farina
  * @brief ESP MQTT Client Library
  */
-// #ifdef USE_ESP_MQTT
+#ifdef USE_ESP_MQTT
 #include "lib_esp_mqtt.h"
 
 #include "mqtt/lib_mqtt.h"
